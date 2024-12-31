@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-sender-monitor",
-  "productName": "whatsapp-sender-monitor",
+  "productName": "Whatsapp Sender Monitor",
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": "src/index.js",
