@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Whatsapp Sender - Monitoring System Tools</title>
+  <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="icons/all.min.css">
+</head>
+
+<body class="font-sans text-gray-900 antialiased bg-gray-50">
+  <header class="bg-emerald-500 text-center py-5">
+    <h2 class="text-white font-bold">Whatsapp Sender Monitoring System</h2>
+  </header>
+  <section class="p-5">
+    <form action="#" method="post" onsubmit="addDevice(event)">
+      <div class="flex flex-col md:flex-row items-center gap-2">
+        <input type="text" id="device" name="device" placeholder="Device" value="http://localhost:9000" required
+          class="border border-gray-300 text-gray-700 px-3 py-2 text-sm" />
+        <input type="text" id="user" name="user" placeholder="User" required
+          class="border border-gray-300 text-gray-700 px-3 py-2 text-sm" />
+        <button type="submit"
+          class="text-xs bg-sky-500 hover:bg-sky-600 px-3 py-2 text-white border-b-4 border-sky-600">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span>Save</span>
+        </button>
+      </div>
+    </form>
+  </section>
+  <hr>
+  <section class="p-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="devices-container">
+    </div>
+  </section>
+  <script src="icons/all.min.js"></script>
+  <script src="socket.io.min.js"></script>
+  <script>
+    const sockets = {};
+
+    function addDevice(event) {
+      event.preventDefault();
+      const device = document.getElementById('device').value;
+      const user = document.getElementById('user').value;
+      const devices = localStorage.getItem('WSMT:devices') || "[]";
+      const devicesParse = JSON.parse(devices);
+      devicesParse.push({
+        device,
+        user
+      });
+      localStorage.setItem('WSMT:devices', JSON.stringify(devicesParse));
+      document.getElementById('device').value = 'http://localhost:9000';
+      document.getElementById('user').value = '';
+      getDevices();
+    }
+
+    function removeDevice(deviceIndex) {
+      const confirmed = confirm('Are you sure to remove this device?');
+      if (confirmed) {
+        if (sockets[deviceIndex]) {
+          sockets[deviceIndex].disconnect();
+          delete sockets[deviceIndex];
+        }
+
+        const devices = localStorage.getItem('WSMT:devices') || "[]";
+        const devicesParse = JSON.parse(devices);
+        devicesParse.splice(deviceIndex, 1);
+        localStorage.setItem('WSMT:devices', JSON.stringify(devicesParse));
+
+        getDevices();
+      }
+    }
+
+    function getDevices() {
+      const devices = localStorage.getItem('WSMT:devices') || "[]";
+      const devicesParse = JSON.parse(devices);
+      let devicesBucket = [];
+      const devicesContainer = document.getElementById('devices-container');
+      devicesContainer.innerHTML = "";
+      if (devicesParse.length > 0) {
+        devicesParse.forEach((device, index) => {
+          devicesBucket += `
+          <div id="device-${index}" onclick="removeDevice(${index})" class="text-center p-5 space-y-3 bg-red-500 border-b-8 border-red-600 drop-shadow cursor-pointer">
+            <h2 class="font-medium text-md text-white drop-shadow">${device.user}</h2>
+            <div class="bg-white py-2 text-gray-700 font-medium space-x-1">
+              <i id="device-icon-${index}" class="fa-solid fa-wifi text-red-600"></i>
+              <span>${device.device}</span>
+            </div>
+          </div>`;
+
+          const socket = io(device.device);
+
+          sockets[index] = socket;
+
+          socket.on('connect', () => {
+            document.getElementById(`device-${index}`).classList.remove('bg-red-500');
+            document.getElementById(`device-${index}`).classList.remove('border-red-600');
+            document.getElementById(`device-icon-${index}`).classList.remove('text-red-600');
+            document.getElementById(`device-${index}`).classList.add('bg-emerald-500');
+            document.getElementById(`device-${index}`).classList.add('border-emerald-600');
+            document.getElementById(`device-icon-${index}`).classList.add('text-emerald-600');
+            console.log(`Connected to server: ${device.user}`);
+          });
+
+          socket.on('connect_error', () => {
+            document.getElementById(`device-${index}`).classList.remove('bg-emerald-500');
+            document.getElementById(`device-${index}`).classList.remove('border-emerald-600');
+            document.getElementById(`device-icon-${index}`).classList.remove('text-emerald-600');
+            document.getElementById(`device-${index}`).classList.add('bg-red-500');
+            document.getElementById(`device-${index}`).classList.add('border-red-600');
+            document.getElementById(`device-icon-${index}`).classList.add('text-red-600');
+            console.log('Gagal terhubung ke server');
+          });
+        });
+
+
+        document.getElementById('devices-container').innerHTML = devicesBucket;
+      }
+    }
+
+    getDevices();
+  </script>
+</body>
+
+</html>
